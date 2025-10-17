@@ -1,0 +1,1 @@
+Publish a Bootstrap page with form id='github-user-100' that fetches a GitHub username, optionally uses ?token=, and displays the account creation date in YYYY-MM-DD UTC inside #github-created-at.

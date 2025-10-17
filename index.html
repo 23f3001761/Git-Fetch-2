@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GitHub User - Creation Date</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    /* Small layout tweak for better presentation on small screens */
+    #github-created-at {
+      min-height: 1.25em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-5">
+    <h1 class="mb-4">GitHub User Creator Date</h1>
+
+    <form id="github-user-100" class="row g-3 align-items-end" autocomplete="off">
+      <div class="col-auto">
+        <label for="github-username" class="form-label visually-hidden">GitHub username</label>
+        <input type="text" class="form-control" id="github-username" placeholder="Enter GitHub username" required />
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Fetch Created At</button>
+      </div>
+    </form>
+
+    <div class="mt-4">
+      <div id="result-status" class="alert" role="status" style="display:none;"></div>
+      <div class="mb-1 text-muted small">Account Created At (UTC):</div>
+      <div id="github-created-at" class="fs-5 mono" aria-live="polite">—</div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle (includes Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    (function() {
+      const form = document.getElementById('github-user-100');
+      const usernameInput = document.getElementById('github-username');
+      const createdAtEl = document.getElementById('github-created-at');
+      const statusEl = document.getElementById('result-status');
+
+      // Parse token from URL ?token=...
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+
+      function showStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.className = 'alert ' + (isError ? 'alert-danger' : 'alert-success');
+        statusEl.style.display = message ? '' : 'none';
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = usernameInput.value.trim();
+        if (!username) {
+          showStatus('Please enter a GitHub username.', true);
+          createdAtEl.textContent = '—';
+          return;
+        }
+
+        showStatus('Fetching data from GitHub...');
+        createdAtEl.textContent = 'Loading...';
+
+        try {
+          const apiUrl = 'https://api.github.com/users/' + encodeURIComponent(username);
+          const headers = {};
+          if (token) headers['Authorization'] = 'token ' + token;
+
+          const resp = await fetch(apiUrl, { headers });
+          if (!resp.ok) {
+            let message = resp.statusText || 'Failed to fetch';
+            try {
+              const data = await resp.json().catch(() => null);
+              if (data && data.message) message = data.message;
+            } catch (_) {}
+            showStatus('Error: ' + message, true);
+            createdAtEl.textContent = '—';
+            return;
+          }
+
+          const user = await resp.json();
+          const createdAt = user.created_at;
+          if (!createdAt) {
+            showStatus('Created date not found for this user.', true);
+            createdAtEl.textContent = '—';
+            return;
+          }
+
+          const dt = new Date(createdAt);
+          const isoDate = dt.toISOString().slice(0, 10);
+          createdAtEl.textContent = isoDate + ' UTC';
+          showStatus('Fetched successfully.');
+        } catch (err) {
+          showStatus('Error: ' + (err?.message ?? 'Unknown error'), true);
+          createdAtEl.textContent = '—';
+        }
+      }, false);
+    })();
+  </script>
+</body>
+</html>
